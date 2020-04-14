@@ -1,5 +1,25 @@
 # 1. import Flask
 from flask import Flask
+import sqlalchemy
+from sqlalchemy.ext.automap import automap_base
+from sqlalchemy.orm import Session
+from sqlalchemy import create_engine, func
+
+from flask import Flask, jsonify
+
+#################################################
+# Database Setup
+#################################################
+engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+
+# reflect an existing database into a new model
+Base = automap_base()
+# reflect the tables
+Base.prepare(engine, reflect=True)
+
+# Save reference to the table
+Measurement = Base.classes.measurement
+Station = Base.classes.station
 
 # 2. Create an app, being sure to pass __name__
 app = Flask(__name__)
@@ -20,8 +40,23 @@ def home():
 
 @app.route("/api/v1.0/precipitation")
 def getPrecipitationByDate():
-    print("Convert the query results to a dictionary using date as the key and prcp as the value.")
-    return "JSON representation of your dictionary"
+
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    results = session.query(Measurement.date,Measurement.prcp).all()
+
+    session.close()
+
+    # Create a dictionary from the row data and append to a list of all_passengers
+    measurement_by_date = []
+    for date, prcp in results:
+        measurement = {}
+        measurement["date"] = date
+        measurement["prcp"] = prcp
+        measurement_by_date.append(measurement)
+
+    return jsonify(measurement_by_date)
 
 @app.route("/api/v1.0/stations")
 def getListOfStations():
