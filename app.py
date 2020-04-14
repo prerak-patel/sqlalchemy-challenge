@@ -6,9 +6,9 @@ import datetime as dt
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
-
 from flask import Flask, jsonify
-
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import scoped_session
 #################################################
 # Database Setup
 #################################################
@@ -26,6 +26,8 @@ Station = Base.classes.station
 # 2. Create an app, being sure to pass __name__
 app = Flask(__name__)
 
+# Create our session (link) from Python to the DB
+session = scoped_session(sessionmaker(engine))
 
 # 3. Define what to do when a user hits the index route
 @app.route("/")
@@ -42,9 +44,6 @@ def home():
 
 @app.route("/api/v1.0/precipitation")
 def getPrecipitationByDate():
-
-    # Create our session (link) from Python to the DB
-    session = Session(engine)
 
     results = session.query(Measurement.date,Measurement.prcp).all()
 
@@ -63,7 +62,7 @@ def getPrecipitationByDate():
 @app.route("/api/v1.0/stations")
 def getListOfStations():
     
-    session = Session(engine)
+    # session = Session(engine)
     results = (session
                 .query(Station.station)
                 .all()
@@ -77,9 +76,6 @@ def getListOfStations():
 
 @app.route("/api/v1.0/tobs")
 def getMostActiveStationOfLastYear():
-
-    # Create our session (link) from Python to the DB
-    session = Session(engine)
 
     # Get last date of the dataset
     for row in session.query(Measurement).order_by(Measurement.date.desc()).limit(1):
@@ -101,14 +97,47 @@ def getMostActiveStationOfLastYear():
     return jsonify(most_active_stations_last_year)
 
 @app.route("/api/v1.0/<start>")
-def getDataByStartDate():
-    print("Query the dates and temperature observations of the most active station for the last year of data.")
-    return "JSON list of temperature observations (TOBS)"
+def getDataByStartDate(start):
+
+    results = (session
+                .query(func.max(Measurement.tobs).label('TMAX'),func.avg(Measurement.tobs).label('TAVG'),func.min(Measurement.tobs).label('TMIN'))
+                .filter(Measurement.date == start)
+            ).all()
+
+    session.close();
+
+    aggregate_data = []
+    for TMAX, TAVG, TMIN in results:
+        key_val = {}
+        key_val["Max Temp"] = TMAX
+        key_val["AVG Temp"] = TAVG
+        key_val["MIN Temp"] = TMIN
+        aggregate_data.append(key_val)
+
+    return jsonify(aggregate_data)
+
 
 @app.route("/api/v1.0/<start>/<end>")
-def getDataBetweenDates():
-    print("Query the dates and temperature observations of the most active station for the last year of data.")
-    return "JSON list of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range."
+def getDataBetweenDates(start,end):
+
+    results = (session
+                .query(func.max(Measurement.tobs).label('TMAX'),func.avg(Measurement.tobs).label('TAVG'),func.min(Measurement.tobs).label('TMIN'))
+                .filter(Measurement.date >= start)
+                .filter(Measurement.date <= end)
+            ).all()
+
+    session.close();
+
+    aggregate_data = []
+
+    for TMAX, TAVG, TMIN in results:
+        key_val = {}
+        key_val["Max Temp"] = TMAX
+        key_val["AVG Temp"] = TAVG
+        key_val["MIN Temp"] = TMIN
+        aggregate_data.append(key_val)
+
+    return jsonify(aggregate_data)
 
 if __name__ == "__main__":
     app.run(debug=True)
