@@ -2,6 +2,7 @@
 from flask import Flask
 import sqlalchemy
 import numpy as np
+import datetime as dt
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
@@ -76,8 +77,28 @@ def getListOfStations():
 
 @app.route("/api/v1.0/tobs")
 def getMostActiveStationOfLastYear():
-    print("Query the dates and temperature observations of the most active station for the last year of data.")
-    return "JSON list of temperature observations (TOBS) for the previous year."
+
+    # Create our session (link) from Python to the DB
+    session = Session(engine)
+
+    # Get last date of the dataset
+    for row in session.query(Measurement).order_by(Measurement.date.desc()).limit(1):
+        max_date = dt.datetime.strptime(row.date,'%Y-%m-%d')
+
+    # Calculate year before date
+    year_before_max_date = max_date - dt.timedelta(12*366/12)
+
+    # Query temperature observations of last year
+    results = (session
+                .query(Measurement.date, Measurement.prcp)
+                .filter(Measurement.date > year_before_max_date).all())
+
+    session.close();
+    
+    # Convert list of tuples into normal list
+    most_active_stations_last_year = list(np.ravel(results))
+    
+    return jsonify(most_active_stations_last_year)
 
 @app.route("/api/v1.0/<start>")
 def getDataByStartDate():
