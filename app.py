@@ -1,6 +1,7 @@
 # 1. import Flask
 from flask import Flask
 import sqlalchemy
+import numpy as np
 from sqlalchemy.ext.automap import automap_base
 from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
@@ -60,7 +61,18 @@ def getPrecipitationByDate():
 
 @app.route("/api/v1.0/stations")
 def getListOfStations():
-    return "JSON list of stations from the dataset."
+    
+    session = Session(engine)
+    results = (session
+                .query(Station.station)
+                .all()
+            )
+    session.close();
+
+    # Convert list of tuples into normal list
+    stations = list(np.ravel(results))
+
+    return jsonify(stations)
 
 @app.route("/api/v1.0/tobs")
 def getMostActiveStationOfLastYear():
