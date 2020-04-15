@@ -41,4 +41,15 @@ jupyter notebook
 
 ![](Images/station-histogram.png)
 
+## Climate App - A Flask API to perform above analysis.
 
+```
+cd sqlalchemy-challenge
+python app.py
+```
+
+### Endpoints 
+* 127.0.0.1:5000/api/v1.0/precipitation - Returns percipitation data for a given date.
+* 127.0.0.1:5000/api/v1.0/stations - Returns list on stations under observation.
+* 127.0.0.1:5000/api/v1.0/tobs - Returns most precipitation data of most active station in Hawaii.
+* 127.0.0.1:5000/api/v1.0/<start> / 127.0.0.1:5000/api/v1.0/<start>/<end> - Returns precipitation data in a particular date range.
